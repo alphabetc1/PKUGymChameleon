@@ -39,6 +39,7 @@ class Counter:
                 bootNum += self.select_and_boot()
                 if bootNum != 0 :
                     break
+                print("Try again.")
                 time.sleep(300 + random.random() * 300)
 
             except Exception as e:
