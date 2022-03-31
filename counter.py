@@ -5,47 +5,50 @@ from selenium.webdriver import Chrome
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC 
 from selenium.webdriver.common.by import By
+from boot_time import *
+from urllib.parse import quote
+from urllib import request
 import datetime
 import time
 import random
-
-def get_boot_date(st, ed):
-    date = []
-    today = datetime.datetime.now()
-    offset = datetime.timedelta(days=1)
-
-    for i in range(ed, st - 1, -1):
-        boot_day = (today + i * offset).strftime("%Y-%m-%d")
-        date.append(boot_day)
-
-    return date
+import json
 
 class Counter:
     driver = None
     conf = None
 
-    def __init__(self, driver, conf):
-        self.driver = driver
+    def __init__(self, conf):
         self.conf = conf
-        print('Driver Launched\n')
     
+
+    def open_drive(self):
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        self.driver = webdriver.Edge(
+            options=chrome_options,
+            executable_path='/usr/bin/chromedriver',
+            service_args=['--ignore-ssl-errors=true', '--ssl-protocol=TLSv1'])
+        print('Driver Launched\n')
+            
 
     def run(self):
         print('Running...')
         bootNum = 0
         while bootNum == 0 :
             try:
+                self.open_drive()
                 self.login()
                 bootNum += self.select_and_boot()
                 if bootNum != 0 :
                     break
                 print("Try again.")
-                time.sleep(300 + random.random() * 300)
+                seconds = seconds_till_twelve()
+                time.sleep(min(300 + random.random() * 300, seconds))
 
             except Exception as e:
+                self.driver.quit()
                 print('Error...')
                 print(e)
-                self.driver.quit()
                 break
                 
 
@@ -91,7 +94,6 @@ class Counter:
 
             while cnt == 0:
                 # reserve
-                index = 0
                 WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
                 row = 2 if page == 2 else 5
@@ -102,6 +104,8 @@ class Counter:
                     start_index = (time - 8) * row
                     for delta in range(row - 1, -1, -1):
                         if reserve_blocks[start_index + delta].get_attribute('class').find('free') != -1:
+                            boot_info = '日期:' + date + ' page:' + str(page) + ' 时间:' + str(time) + ' 场地' + str(page * 5 + delta + 1)
+                            print(boot_info)
                             reserve_blocks[start_index + delta].click()
                             self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
@@ -115,7 +119,10 @@ class Counter:
                             self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
                             cnt += 1
-                            print('日期:' + date + ' page:' + str(page) + ' 时间:' + str(time) + ' 场地' + str(page * 5 + delta + 1))
+
+                            if self.conf.wechat:
+                                self.wechat_notification(boot_info, self.conf.sdkey)
+
                     if cnt != 0:
                         break
 
@@ -149,15 +156,16 @@ class Counter:
 
     def boot(self):
         print('Booting...')
-        
-
-    def count(self):
-        print('Counting...')
 
 
-    def wechat_notification(self):
+    def wechat_notification(self, boot_info, sdkey):
         print('Wechat Notification...')
-        # wechat_notification(userName, sckey)
-        # self.conf.wechat, self.conf.sdkey
-
-
+        with request.urlopen(
+                quote('https://sctapi.ftqq.com/' + sdkey + '.send?title=场地预约成功\n' +
+                        boot_info + '\n',
+                        safe='/:?=&')) as response:
+            response = json.loads(response.read().decode('utf-8'))
+        if response['error'] == 'SUCCESS':
+            print('微信通知成功！')
+        else:
+            print(str(response['errno']) + ' error: ' + response['errmsg'])
