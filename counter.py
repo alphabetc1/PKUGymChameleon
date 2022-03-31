@@ -13,6 +13,7 @@ import time
 import random
 import json
 
+
 class Counter:
     driver = None
     conf = None
@@ -34,12 +35,12 @@ class Counter:
     def run(self):
         print('Running...')
         bootNum = 0
-        while bootNum == 0 :
+        while bootNum < 2 :
             try:
                 self.open_drive()
                 self.login()
                 bootNum += self.select_and_boot()
-                if bootNum != 0 :
+                if bootNum == 2 :
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
@@ -92,7 +93,7 @@ class Counter:
             self.driver.find_element(By.CLASS_NAME, 'ivu-icon-md-refresh').click()
             page = 0
 
-            while cnt == 0:
+            while cnt < 2:
                 # reserve
                 WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
@@ -104,8 +105,6 @@ class Counter:
                     start_index = (time - 8) * row
                     for delta in range(row - 1, -1, -1):
                         if reserve_blocks[start_index + delta].get_attribute('class').find('free') != -1:
-                            boot_info = '日期:' + date + ' page:' + str(page) + ' 时间:' + str(time) + ' 场地' + str(page * 5 + delta + 1)
-                            print(boot_info)
                             reserve_blocks[start_index + delta].click()
                             self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
@@ -120,10 +119,13 @@ class Counter:
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
                             cnt += 1
 
-                            if self.conf.wechat:
-                                self.wechat_notification(boot_info, self.conf.sdkey)
+                            boot_info = '日期:' + date + ' page:' + str(page) + ' 时间:' + str(time) + ' 场地' + str(page * 5 + delta + 1)
+                            print(boot_info)
 
-                    if cnt != 0:
+                            if self.conf.wechat:
+                                wechat_notification(boot_info, self.conf.sdkey)
+
+                    if cnt == 2:
                         break
 
                 # pull right
@@ -138,6 +140,7 @@ class Counter:
 
     def select(self):
         print('Selecting...')
+        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
         self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
             find_element(By.CLASS_NAME, 'header').\
                 find_element(By.CLASS_NAME, 'headerContent').\
@@ -158,13 +161,12 @@ class Counter:
         print('Booting...')
 
 
-    def wechat_notification(self, boot_info, sdkey):
-        print('Wechat Notification...')
-        with request.urlopen(
-                quote('https://sctapi.ftqq.com/' + sdkey + '.send?title=场地预约成功\n' +
+def wechat_notification(boot_info, sckey):
+    with request.urlopen(
+            quote('https://sctapi.ftqq.com/' + sckey + '.send?title=场地预约成功&desp=' +
                         boot_info + '\n',
                         safe='/:?=&')) as response:
-            response = json.loads(response.read().decode('utf-8'))
+        response = json.loads(response.read().decode('utf-8'))
         if response['error'] == 'SUCCESS':
             print('微信通知成功！')
         else:
