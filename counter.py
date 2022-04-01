@@ -20,6 +20,7 @@ class Counter:
 
     def __init__(self, conf):
         self.conf = conf
+        
     
 
     def open_drive(self):
@@ -82,18 +83,17 @@ class Counter:
     def select_and_boot(self):
         self.select()
         print ('Booting...')
+        self.boot_date = get_boot_date(self.conf.date_st, self.conf.date_ed)
         # times = [19, 20, 21, 15, 16, 17, 18, 11, 10]
         cnt = 0
-        
-        boot_date = get_boot_date(self.conf.date_st, self.conf.date_ed)
  
-        for date in boot_date:
+        for date in self.boot_date:
             self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline').click()
             self.driver.find_element(By.CLASS_NAME, 'ivu-input-with-suffix').send_keys(date)
             self.driver.find_element(By.CLASS_NAME, 'ivu-icon-md-refresh').click()
             page = 0
 
-            while cnt < 2:
+            while True:
                 # reserve
                 WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
@@ -106,6 +106,10 @@ class Counter:
                     for delta in range(row - 1, -1, -1):
                         if reserve_blocks[start_index + delta].get_attribute('class').find('free') != -1:
                             reserve_blocks[start_index + delta].click()
+                            if self.conf.boot_time > 1:
+                                if start_index + delta + row < len(reserve_blocks) & reserve_blocks[start_index + delta + row].get_attribute('class').find('free') != -1:
+                                    reserve_blocks[start_index + delta + row].click()
+                                    cnt += 1
                             self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
                             WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
@@ -119,14 +123,12 @@ class Counter:
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
                             cnt += 1
 
-                            boot_info = '日期:' + date + ' page:' + str(page) + ' 时间:' + str(time) + ' 场地' + str(page * 5 + delta + 1)
+                            boot_info = '日期:' + date + '\n时间:' + str(time) + '\n场地' + str(page * 5 + delta + 1) +  '\n时长' + str(cnt)
                             print(boot_info)
 
                             if self.conf.wechat:
                                 wechat_notification(boot_info, self.conf.sdkey)
-
-                    if cnt == 2:
-                        break
+                            return cnt
 
                 # pull right
                 pull_right = len(self.driver.find_elements(By.CLASS_NAME, 'pull-right'))>0
