@@ -11,12 +11,15 @@ class ConfParser:
         self.id, self.password, self.phone_number = dict(conf['user']).values()
 
         # 场地信息
+        self.boot_time = conf.getint('venue', '时长')
         self.date_st, self.date_ed = conf.getint('date', 'st'), conf.getint('date', 'ed')
         self.times = conf.get('times', 'times')
         self.timesPriority = self.times.split(' ')
-        self.wechat, self.sdkey = dict(conf['wechat']).values()
+
+        # 微信通知
+        self.wechat = conf.getboolean('wechat', '是否需要微信通知')
+        self.sckey = conf.get('wechat', 'sckey')
 
 
 if __name__ == '__main__':
     conf = ConfParser('config.ini')
-    print (conf.phone_number)
