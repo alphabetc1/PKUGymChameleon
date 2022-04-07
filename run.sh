@@ -1,1 +1,3 @@
-python3 /home/shuwenn/code/tools/gymCounter/main.py
+python3 ./main.py
+killall -9 chrome
+killall -9 chromedriver

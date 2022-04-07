@@ -12,6 +12,9 @@ import datetime
 import time
 import random
 import json
+from selenium.webdriver.common.action_chains import ActionChains
+import urllib
+from verifier import *
 
 
 class Counter:
@@ -21,14 +24,13 @@ class Counter:
     def __init__(self, conf):
         self.conf = conf
         
-    
 
     def open_drive(self):
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         self.driver = webdriver.Edge(
             options=chrome_options,
-            executable_path='/usr/bin/chromedriver',
+            executable_path='./drivers/chromedriver',
             service_args=['--ignore-ssl-errors=true', '--ssl-protocol=TLSv1'])
         print('Driver Launched\n')
             
@@ -41,11 +43,11 @@ class Counter:
                 self.open_drive()
                 self.login()
                 bootNum += self.select_and_boot()
-                if bootNum == 2 :
+                if bootNum > 2 :
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
-                time.sleep(min(300 + random.random() * 300, seconds))
+                time.sleep(min(120 + random.random() * 60, seconds - 1))
 
             except Exception as e:
                 self.driver.quit()
@@ -57,7 +59,7 @@ class Counter:
     def login(self, retry = 0):
         print('Logging in...')
         try:
-            self.driver.maximize_window()
+            # self.driver.maximize_window()
             self.driver.get("https://epe.pku.edu.cn/venue/pku/Login")
             WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
             loginButton = self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')
@@ -74,17 +76,17 @@ class Counter:
             loginButton = self.driver.find_element(By.ID, 'logon_button')
             loginButton.click()
             WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/PKU/home'))
-        except:
-            if retry < 3:
+        except Exception as e:
+            if retry < 2:
                 self.login(retry + 1)
             else:
+                print (e)
                 raise Exception('Login Failed')
         
     def select_and_boot(self):
         self.select()
         print ('Booting...')
         self.boot_date = get_boot_date(self.conf.date_st, self.conf.date_ed)
-        # times = [19, 20, 21, 15, 16, 17, 18, 11, 10]
         cnt = 0
  
         for date in self.boot_date:
@@ -97,7 +99,8 @@ class Counter:
                 # reserve
                 WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
-                row = 2 if page == 2 else 5
+                # row = 2 if page == 2 else 5
+                row = 4
 
                 # for time in self.timesPriority:
                 for timeStr in self.conf.timesPriority:
@@ -105,29 +108,20 @@ class Counter:
                     start_index = (time - 8) * row
                     for delta in range(row - 1, -1, -1):
                         if reserve_blocks[start_index + delta].get_attribute('class').find('free') != -1:
+                            boot_info = '日期:' + date + '\n时间:' + str(time) + '\n场地' + str(page * 5 + delta + 1) +  '\n时长' + str(cnt)
                             reserve_blocks[start_index + delta].click()
-                            if self.conf.boot_time > 1:
-                                if start_index + delta + row < len(reserve_blocks) & reserve_blocks[start_index + delta + row].get_attribute('class').find('free') != -1:
-                                    reserve_blocks[start_index + delta + row].click()
-                                    cnt += 1
                             self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
                             WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
-                                    clear()
-                            self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
                                     send_keys(self.conf.phone_number)
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
+                            self.verify()
                             WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
                             self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
-                            cnt += 1
-
-                            boot_info = '日期:' + date + '\n时间:' + str(time) + '\n场地' + str(page * 5 + delta + 1) +  '\n时长' + str(cnt)
-                            print(boot_info)
-
-                            if self.conf.wechat:
-                                wechat_notification(boot_info, self.conf.sdkey)
+                            cnt = 1000
+                            # cnt = self.boot(reserve_blocks, start_index, delta, row)
                             return cnt
 
                 # pull right
@@ -153,14 +147,89 @@ class Counter:
         self.driver.find_element(By.CLASS_NAME, 'venueList').\
         find_elements(By.CLASS_NAME, 'venueItem')[0].\
             find_element(By.CLASS_NAME, 'venueDetailBottom').\
-                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
+                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[1].click() 
+        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/68'))
         # date
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))
+        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
 
 
-    def boot(self):
-        print('Booting...')
+    def boot(self, reserve_blocks, start_index, delta, row):
+        cnt = 0
+        reserve_blocks[start_index + delta].click()
+        if self.conf.boot_time > 1:
+            if (start_index + delta + row < len(reserve_blocks) - 5) & reserve_blocks[start_index + delta + row].get_attribute('class').find('free') != -1:
+                reserve_blocks[start_index + delta + row].click()
+                cnt += 1
+        self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
+        self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
+        WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
+        self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
+                clear()
+        self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
+                send_keys(self.conf.phone_number)
+        self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
+        WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
+        self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
+        self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
+        cnt += 1
+        return cnt
+        # if self.conf.wechat:
+        #     wechat_notification(boot_info, self.conf.sdkey)
+
+
+    def verify(self):
+        print('Verifying...')
+        self.save_img()
+        distance = img_compute_edge()
+        tracks = get_track(distance)
+        ans = self.slide(tracks)
+        if ans != 1:
+            self.verify()
+
+
+    def save_img(self):
+        print('Saving img...')
+        left_xpath = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div/div/img'
+        right_xpath = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[1]/div/img'
+        left_img_url = self.driver.find_elements_by_xpath(left_xpath)[0].get_attribute('src')
+        right_img_url = self.driver.find_elements_by_xpath(right_xpath)[0].get_attribute('src')
+        self.save(left_img_url, 'left')
+        self.save(right_img_url, 'right')
+    
+
+    def save(self, url, name):
+        if url != None:
+            data = urllib.request.urlopen(url).read()
+            f = open('./pics/' + name + '.png', 'wb')
+            f.write(data)  
+            f.close()
+
+
+    def slide(self, tracks):
+        print('Sliding...')
+        block = self.driver.find_element(By.CLASS_NAME, 'verify-move-block')
+        # 鼠标点击并按住不松
+        ActionChains(self.driver).move_to_element(block).perform()
+        ActionChains(self.driver).click_and_hold(block).perform()
+        print('move on')
+        for item in tracks:
+            ActionChains(self.driver).move_by_offset(xoffset=item, yoffset=random.randint(-1,1)).perform()
+        # 稳定一秒再松开
+        time.sleep(1)
+        ActionChains(self.driver).release(block).perform()
+        time.sleep(1)
+        # 随机拿开鼠标
+        # webdriver.ActionChains(self.driver).move_by_offset(xoffset=random.randint(200, 300), yoffset=random.randint(200, 300)).perform()
+        print('succ')
+        ans_path = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[1]/div'
+        ans = self.driver.find_element_by_xpath(ans_path)
+        if '验证成功' in ans.text:
+            return 1
+
+        if '验证失败' in ans.text:
+            return 2
+
+        return -1
 
 
 def wechat_notification(boot_info, sckey):
