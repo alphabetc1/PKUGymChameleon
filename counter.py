@@ -59,7 +59,7 @@ class Counter:
     def login(self, retry = 0):
         print('Logging in...')
         try:
-            # self.driver.maximize_window()
+            self.driver.maximize_window()
             self.driver.get("https://epe.pku.edu.cn/venue/pku/Login")
             WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
             loginButton = self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')
@@ -116,6 +116,7 @@ class Counter:
                             self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
                                     send_keys(self.conf.phone_number)
                             self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
+                            self.driver.get_screenshot_as_file('./pics/debug1.png')
                             self.verify()
                             WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
                             self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
@@ -207,8 +208,14 @@ class Counter:
 
     def slide(self, tracks):
         print('Sliding...')
+        js = "document.getElementsByClassName('reservation-step-two')[0].style.display='block'"
+        self.driver.execute_script(js)
+        # path = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div'
+        self.driver.get_screenshot_as_file('./pics/debug2.png')
         block = self.driver.find_element(By.CLASS_NAME, 'verify-move-block')
-        # 鼠标点击并按住不松
+        # block = self.driver.find_element_by_xpath(path)
+        print(block.is_displayed())
+
         ActionChains(self.driver).move_to_element(block).perform()
         ActionChains(self.driver).click_and_hold(block).perform()
         print('move on')
