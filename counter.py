@@ -108,23 +108,10 @@ class Counter:
                     start_index = (time - 8) * row
                     for delta in range(row - 1, -1, -1):
                         if reserve_blocks[start_index + delta].get_attribute('class').find('free') != -1:
+                            cnt = self.boot(reserve_blocks, start_index, delta, row)
                             boot_info = '日期:' + date + '\n时间:' + str(time) + '\n场地' + str(page * 5 + delta + 1) +  '\n时长' + str(cnt)
-                            reserve_blocks[start_index + delta].click()
-                            self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
-                            self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
-                            WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
-                            self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
-                                    send_keys(self.conf.phone_number)
-                            self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
-                            self.driver.get_screenshot_as_file('./pics/debug1.png')
-                            self.verify()
-                            WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
-                            self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
-                            self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
-                            cnt = 1000
-                            # cnt = self.boot(reserve_blocks, start_index, delta, row)
+                            print(boot_info)
                             return cnt
-
                 # pull right
                 pull_right = len(self.driver.find_elements(By.CLASS_NAME, 'pull-right'))>0
                 if pull_right is False:
@@ -169,6 +156,8 @@ class Counter:
         self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
                 send_keys(self.conf.phone_number)
         self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
+        self.display_all()
+        self.verify()
         WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
         self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
         self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
@@ -183,8 +172,11 @@ class Counter:
         self.save_img()
         distance = img_compute_edge()
         tracks = get_track(distance)
+        print (tracks)
         ans = self.slide(tracks)
+        print ('滑动结果:' + str(ans))
         if ans != 1:
+            time.sleep(1)
             self.verify()
 
 
@@ -208,35 +200,32 @@ class Counter:
 
     def slide(self, tracks):
         print('Sliding...')
-        js = "document.getElementsByClassName('reservation-step-two')[0].style.display='block'"
-        self.driver.execute_script(js)
-        # path = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[2]/div/div'
-        self.driver.get_screenshot_as_file('./pics/debug2.png')
         block = self.driver.find_element(By.CLASS_NAME, 'verify-move-block')
-        # block = self.driver.find_element_by_xpath(path)
-        print(block.is_displayed())
-
-        ActionChains(self.driver).move_to_element(block).perform()
+        
         ActionChains(self.driver).click_and_hold(block).perform()
         print('move on')
         for item in tracks:
             ActionChains(self.driver).move_by_offset(xoffset=item, yoffset=random.randint(-1,1)).perform()
         # 稳定一秒再松开
-        time.sleep(1)
+        time.sleep(0.1)
         ActionChains(self.driver).release(block).perform()
-        time.sleep(1)
-        # 随机拿开鼠标
-        # webdriver.ActionChains(self.driver).move_by_offset(xoffset=random.randint(200, 300), yoffset=random.randint(200, 300)).perform()
-        print('succ')
+        self.driver.get_screenshot_as_file('./pics/debug2.png')
+        
         ans_path = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[1]/div'
         ans = self.driver.find_element_by_xpath(ans_path)
+
         if '验证成功' in ans.text:
             return 1
-
-        if '验证失败' in ans.text:
-            return 2
-
         return -1
+
+
+    def display_all(self):
+        js_display_mask = 'document.getElementsByClassName("mask")[0].style.display="block";'
+        self.driver.execute_script(js_display_mask)
+
+        js_remove_style = 'arguments[0].removeAttribute("style");'
+        relative = self.driver.find_element_by_xpath('/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div')
+        self.driver.execute_script(js_remove_style, relative)
 
 
 def wechat_notification(boot_info, sckey):
@@ -249,3 +238,5 @@ def wechat_notification(boot_info, sckey):
             print('微信通知成功！')
         else:
             print(str(response['errno']) + ' error: ' + response['errmsg'])
+
+

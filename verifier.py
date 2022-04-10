@@ -16,7 +16,7 @@ def get_track(distance):
     # 初速度
     v=0
     # 单位时间为0.2s来统计轨迹，轨迹即0.2内的位移
-    t=0.3
+    t=0.5
     # 位移/轨迹列表，列表内的一个元素代表0.2s的位移
     tracks=[]
     # 当前的位移
@@ -25,13 +25,13 @@ def get_track(distance):
     mid=distance * 5/8
 
     distance += 10  # 先滑过一点，最后再反着滑动回来
-    # a = random.randint(1,3)
+    
     while current < distance:
         if current < mid:
             # 加速度越小，单位时间的位移越小,模拟的轨迹就越多越详细
-            a = random.randint(1,3)  # 加速运动
+            a = random.randint(5,10)  # 加速运动
         else:
-            a = -random.randint(2,4) # 减速运动
+            a = -random.randint(5,10) # 减速运动
 
         # 初速度
         v0 = v
@@ -46,11 +46,9 @@ def get_track(distance):
         v= v0+a*t
 
     # 反着滑动到大概准确位置
-    for i in range(4):
-        tracks.append(-random.randint(1,3))
+    tracks.append(distance - current - 5)
     # for i in range(4):
     #    tracks.append(-random.randint(1,3))
-    random.shuffle(tracks)
     return tracks
 
 
@@ -91,7 +89,7 @@ def img_compute_edge():
     plt.imshow(right_img)
     plt.savefig('mygraph2_edge.png')
 
-    return ndx + (46 - dx)
+    return ndx
 
 
 def img_compute_bg():
