@@ -22,16 +22,16 @@ def get_track(distance):
     # 当前的位移
     current=0
     # 到达mid值开始减速
-    mid=distance * 5/8
+    mid=distance * 6/8
 
-    distance += 10  # 先滑过一点，最后再反着滑动回来
+    distance += 5  # 先滑过一点，最后再反着滑动回来
     
     while current < distance:
         if current < mid:
             # 加速度越小，单位时间的位移越小,模拟的轨迹就越多越详细
-            a = random.randint(5,10)  # 加速运动
+            a = random.randint(8,15)  # 加速运动
         else:
-            a = -random.randint(5,10) # 减速运动
+            a = -random.randint(8,15) # 减速运动
 
         # 初速度
         v0 = v
@@ -46,9 +46,7 @@ def get_track(distance):
         v= v0+a*t
 
     # 反着滑动到大概准确位置
-    tracks.append(distance - current - 5)
-    # for i in range(4):
-    #    tracks.append(-random.randint(1,3))
+    # tracks.append(distance - current - 5)
     return tracks
 
 
@@ -67,27 +65,23 @@ def img_compute_edge():
         x, y, w, h = cv2.boundingRect(contour)
         if (w > dw) or (h > dh):
             dx, dy, dw, dh = x, y, w, h
-    cv2.rectangle(left_img, (dx, dy), (dx + dw, dy + dh), (0, 0, 255), 2)
-    print(dx, dy, dw, dh)
-    plt.imshow(left_img)
-    plt.savefig('mygraph1_edge.png')
+    # cv2.rectangle(left_img, (dx, dy), (dx + dw, dy + dh), (0, 0, 255), 2)
+    # plt.imshow(left_img)
+    # plt.savefig('mygraph1_edge.png')
     right_contours, _ = cv2.findContours(right_canny, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
     
     delta = 9999
-    ndx, ndy, ndw, ndh = 0, 0, 0, 0
+    ndx = 0
     for i, contour in enumerate(right_contours):
         x, y, w, h = cv2.boundingRect(contour)
-        # ndelta = abs(y - dy + w - dw + h - dh)
         ndelta = abs(y - dy) + abs(w - dw) + abs(h - dh)
         
         if ndelta < delta:
-            # print(x, y, w, h)
-            ndx, ndy, ndw, ndh = x, y, w, h
+            ndx = x
             delta = ndelta
-    print(ndx, ndy, ndw, ndh)
-    cv2.rectangle(right_img, (ndx, ndy), (ndx + ndw, ndy + ndh), (0, 0, 255), 2)
-    plt.imshow(right_img)
-    plt.savefig('mygraph2_edge.png')
+    # cv2.rectangle(right_img, (ndx, ndy), (ndx + ndw, ndy + ndh), (0, 0, 255), 2)
+    # plt.imshow(right_img)
+    # plt.savefig('mygraph2_edge.png')
 
     return ndx
 

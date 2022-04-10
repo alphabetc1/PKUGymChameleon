@@ -47,12 +47,12 @@ class Counter:
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
-                time.sleep(min(120 + random.random() * 60, seconds - 1))
+                time.sleep(min(300 + random.random() * 300, seconds - 5))
 
             except Exception as e:
-                self.driver.quit()
                 print('Error...')
-                print(e)
+                self.driver.get_screenshot_as_file('./pics/debug_run.png')
+                self.driver.quit()
                 break
                 
 
@@ -76,11 +76,10 @@ class Counter:
             loginButton = self.driver.find_element(By.ID, 'logon_button')
             loginButton.click()
             WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/PKU/home'))
-        except Exception as e:
+        except:
             if retry < 2:
                 self.login(retry + 1)
             else:
-                print (e)
                 raise Exception('Login Failed')
         
     def select_and_boot(self):
@@ -175,8 +174,8 @@ class Counter:
         print (tracks)
         ans = self.slide(tracks)
         print ('滑动结果:' + str(ans))
-        if ans != 1:
-            time.sleep(1)
+        if ans == -1:
+            time.sleep(0.5)
             self.verify()
 
 
@@ -209,7 +208,7 @@ class Counter:
         # 稳定一秒再松开
         time.sleep(0.1)
         ActionChains(self.driver).release(block).perform()
-        self.driver.get_screenshot_as_file('./pics/debug2.png')
+        self.driver.get_screenshot_as_file('./pics/verilator.png')
         
         ans_path = '/html/body/div[1]/div/div/div[3]/div[2]/div/div[2]/div[2]/div/div[2]/div/div[1]/div'
         ans = self.driver.find_element_by_xpath(ans_path)
