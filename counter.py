@@ -47,7 +47,7 @@ class Counter:
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
-                time.sleep(min(300 + random.random() * 300, seconds - 5))
+                time.sleep(min(120 + random.random() * 60, seconds - 1))
 
             except Exception as e:
                 print('Error...')
@@ -59,7 +59,7 @@ class Counter:
     def login(self, retry = 0):
         print('Logging in...')
         try:
-            self.driver.maximize_window()
+            # self.driver.maximize_window()
             self.driver.get("https://epe.pku.edu.cn/venue/pku/Login")
             WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
             loginButton = self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')
@@ -82,9 +82,15 @@ class Counter:
             else:
                 raise Exception('Login Failed')
         
+
     def select_and_boot(self):
-        self.select()
         print ('Booting...')
+        rows = []
+        if self.conf.boot_place == 1:
+            rows = self.select_qdb()
+        if self.conf.boot_place == 2:
+            rows = self.select_54()
+        
         self.boot_date = get_boot_date(self.conf.date_st, self.conf.date_ed)
         cnt = 0
  
@@ -94,12 +100,10 @@ class Counter:
             self.driver.find_element(By.CLASS_NAME, 'ivu-icon-md-refresh').click()
             page = 0
 
-            while True:
+            for row in rows:
                 # reserve
                 WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
-                # row = 2 if page == 2 else 5
-                row = 4
 
                 # for time in self.timesPriority:
                 for timeStr in self.conf.timesPriority:
@@ -110,6 +114,8 @@ class Counter:
                             cnt = self.boot(reserve_blocks, start_index, delta, row)
                             boot_info = '日期:' + date + '\n时间:' + str(time) + '\n场地' + str(page * 5 + delta + 1) +  '\n时长' + str(cnt)
                             print(boot_info)
+                            if self.conf.wechat:
+                                wechat_notification(boot_info, self.conf.sckey)
                             return cnt
                 # pull right
                 pull_right = len(self.driver.find_elements(By.CLASS_NAME, 'pull-right'))>0
@@ -121,8 +127,8 @@ class Counter:
         return cnt
 
 
-    def select(self):
-        print('Selecting...')
+    def select_qdb(self):
+        print('Selecting qdb...')
         WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
         self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
             find_element(By.CLASS_NAME, 'header').\
@@ -134,10 +140,33 @@ class Counter:
         self.driver.find_element(By.CLASS_NAME, 'venueList').\
         find_elements(By.CLASS_NAME, 'venueItem')[0].\
             find_element(By.CLASS_NAME, 'venueDetailBottom').\
-                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[1].click() 
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/68'))
+                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
+        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
         # date
         WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
+        rows = [5, 5, 2]
+        return rows
+
+
+    def select_54(self):
+        print('Selecting 54...')
+        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
+        self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
+            find_element(By.CLASS_NAME, 'header').\
+                find_element(By.CLASS_NAME, 'headerContent').\
+                    find_elements(By.CLASS_NAME, 'tabItem')[1].click()
+        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
+        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
+        # venueItem:qdb venueDetailBottomItem:羽毛球场
+        self.driver.find_element(By.CLASS_NAME, 'venueList').\
+        find_elements(By.CLASS_NAME, 'venueItem')[1].\
+            find_element(By.CLASS_NAME, 'venueDetailBottom').\
+                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
+        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/86'))
+        # date
+        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
+        rows = [5, 4]
+        return rows
 
 
     def boot(self, reserve_blocks, start_index, delta, row):
@@ -162,8 +191,6 @@ class Counter:
         self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
         cnt += 1
         return cnt
-        # if self.conf.wechat:
-        #     wechat_notification(boot_info, self.conf.sdkey)
 
 
     def verify(self):
