@@ -17,7 +17,7 @@ import urllib
 from verifier import *
 
 
-class Counter:
+class Chameleon:
     driver = None
     conf = None
 

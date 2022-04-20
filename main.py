@@ -1,6 +1,6 @@
 # -*- coding: utf-8
 from parser import ConfParser
-from counter import Counter
+from chameleon import Chameleon
 import sys
 
 def sys_path(browser):
@@ -14,7 +14,8 @@ def sys_path(browser):
     else:
         raise Exception('暂不支持该系统')
 
+
 if __name__ == '__main__':
     conf = ConfParser('config.ini')
-    grabber = Counter(conf)
-    grabber.run()
+    chameleon = Chameleon(conf)
+    chameleon.run()
