@@ -37,18 +37,17 @@ class Chameleon:
 
     def run(self):
         print('Running...')
-        bootNum = 0
-        while bootNum < 2 :
+        boot_time = 0
+        while boot_time < self.conf.boot_time :
             try:
                 self.open_drive()
                 self.login()
-                bootNum += self.select_and_boot()
-                if bootNum > 2 :
+                boot_time += self.select_and_boot()
+                if boot_time >= self.conf.boot_time :
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
                 time.sleep(min(120 + random.random() * 60, seconds - 1))
-
             except Exception as e:
                 print('Error...')
                 self.driver.get_screenshot_as_file('./pics/debug_run.png')
