@@ -1,1 +1,3 @@
-# gtmCounter
+# PKUGymChameleon
+## usage
+./run.sh
