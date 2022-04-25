@@ -19,5 +19,10 @@ def seconds_till_twelve():
     return abs((12 - now.hour) * 3600 - now.minute * 60 - now.second)
 
 
+def current_hour_minute_second():
+    return datetime.datetime.now().strftime("%H_%M_%S")
+
+
 if __name__ == '__main__':
-    print(seconds_till_twelve())
+    now = datetime.datetime.now().strftime("%H_%M_%S")
+    print(now)

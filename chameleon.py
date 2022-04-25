@@ -47,10 +47,11 @@ class Chameleon:
                     break
                 print("Try again.")
                 seconds = seconds_till_twelve()
-                time.sleep(min(120 + random.random() * 60, seconds - 1))
+                time.sleep(min(120 + random.random() * 60, seconds - 3))
             except Exception as e:
                 print('Error...')
-                self.driver.get_screenshot_as_file('./pics/debug_run.png')
+                current_time = current_hour_minute_second()
+                self.driver.get_screenshot_as_file('./pics/debug_' + current_time + '.png')
                 self.driver.quit()
                 break
                 
@@ -58,7 +59,7 @@ class Chameleon:
     def login(self, retry = 0):
         print('Logging in...')
         try:
-            # self.driver.maximize_window()
+            self.driver.maximize_window()
             self.driver.get("https://epe.pku.edu.cn/venue/pku/Login")
             WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
             loginButton = self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')
@@ -126,46 +127,54 @@ class Chameleon:
         return cnt
 
 
-    def select_qdb(self):
+    def select_qdb(self, retry = 0):
         print('Selecting qdb...')
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
-        self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
-            find_element(By.CLASS_NAME, 'header').\
-                find_element(By.CLASS_NAME, 'headerContent').\
-                    find_elements(By.CLASS_NAME, 'tabItem')[1].click()
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
-        # venueItem:qdb venueDetailBottomItem:羽毛球场
-        self.driver.find_element(By.CLASS_NAME, 'venueList').\
-        find_elements(By.CLASS_NAME, 'venueItem')[0].\
-            find_element(By.CLASS_NAME, 'venueDetailBottom').\
-                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
-        # date
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
-        rows = [5, 5, 2]
-        return rows
+        try:
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
+            self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
+                find_element(By.CLASS_NAME, 'header').\
+                    find_element(By.CLASS_NAME, 'headerContent').\
+                        find_elements(By.CLASS_NAME, 'tabItem')[1].click()
+            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
+            # venueItem:qdb venueDetailBottomItem:羽毛球场
+            self.driver.find_element(By.CLASS_NAME, 'venueList').\
+            find_elements(By.CLASS_NAME, 'venueItem')[0].\
+                find_element(By.CLASS_NAME, 'venueDetailBottom').\
+                    find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
+            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
+            # date
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))  
+            rows = [5, 5, 2]
+            return rows
+        except:
+            if retry < 2:
+                self.select_qdb(retry + 1)
+        
 
 
-    def select_54(self):
+    def select_54(self, retry = 0):
         print('Selecting 54...')
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
-        self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
-            find_element(By.CLASS_NAME, 'header').\
-                find_element(By.CLASS_NAME, 'headerContent').\
-                    find_elements(By.CLASS_NAME, 'tabItem')[1].click()
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
-        # venueItem:qdb venueDetailBottomItem:羽毛球场
-        self.driver.find_element(By.CLASS_NAME, 'venueList').\
-        find_elements(By.CLASS_NAME, 'venueItem')[1].\
-            find_element(By.CLASS_NAME, 'venueDetailBottom').\
-                find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
-        WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/86'))
-        # date
-        WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
-        rows = [5, 4]
-        return rows
+        try:
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
+            self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
+                find_element(By.CLASS_NAME, 'header').\
+                    find_element(By.CLASS_NAME, 'headerContent').\
+                        find_elements(By.CLASS_NAME, 'tabItem')[1].click()
+            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
+            # venueItem:qdb venueDetailBottomItem:羽毛球场
+            self.driver.find_element(By.CLASS_NAME, 'venueList').\
+            find_elements(By.CLASS_NAME, 'venueItem')[1].\
+                find_element(By.CLASS_NAME, 'venueDetailBottom').\
+                    find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
+            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/86'))
+            # date
+            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
+            rows = [5, 4]
+            return rows
+        except:
+            self.select_54(retry + 1)
 
 
     def boot(self, reserve_blocks, start_index, delta, row):
@@ -259,9 +268,6 @@ def wechat_notification(boot_info, sckey):
                         boot_info + '\n',
                         safe='/:?=&')) as response:
         response = json.loads(response.read().decode('utf-8'))
-        if response['error'] == 'SUCCESS':
-            print('微信通知成功！')
-        else:
-            print(str(response['errno']) + ' error: ' + response['errmsg'])
+        print(response)
 
 
