@@ -20,6 +20,7 @@ from verifier import *
 class Chameleon:
     driver = None
     conf = None
+    local_boot_place = 1
 
     def __init__(self, conf):
         self.conf = conf
@@ -28,7 +29,7 @@ class Chameleon:
     def open_drive(self):
         chrome_options = Options()
         chrome_options.add_argument("--headless")
-        self.driver = webdriver.Edge(
+        self.driver = webdriver.Chrome(
             options=chrome_options,
             executable_path='./drivers/chromedriver',
             service_args=['--ignore-ssl-errors=true', '--ssl-protocol=TLSv1'])
@@ -37,16 +38,20 @@ class Chameleon:
 
     def run(self):
         print('Running...')
-        boot_time = 0
-        while boot_time < self.conf.boot_time :
+        global_boot_time = 0
+        err_retry_time = 6
+        while global_boot_time < self.conf.boot_time :
             try:
                 self.open_drive()
                 self.login()
-                boot_time += self.select_and_boot()
-                if boot_time >= self.conf.boot_time :
-                    break
+
+                local_boot_time, err = self.select_and_boot()
+                global_boot_time += local_boot_time
                 print("Try again.")
                 seconds = seconds_till_twelve()
+                if err != None:
+                    # 本轮错误
+                    seconds = min(seconds, err_retry_time)
                 time.sleep(min(120 + random.random() * 60, seconds - 3))
             except Exception as e:
                 print('Error...')
@@ -61,12 +66,12 @@ class Chameleon:
         try:
             self.driver.maximize_window()
             self.driver.get("https://epe.pku.edu.cn/venue/pku/Login")
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')))
             loginButton = self.driver.find_element(By.CLASS_NAME, 'loginFlagWrapItem')
             loginButton.click()
             # portal login
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://iaaa.pku.edu.cn/iaaa/oauth.jsp'))
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.ID, 'user_name')))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://iaaa.pku.edu.cn/iaaa/oauth.jsp'))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.ID, 'user_name')))
             IDBlock = self.driver.find_element(By.ID, 'user_name')
             passwordBlock = self.driver.find_element(By.ID, 'password')
 
@@ -75,7 +80,7 @@ class Chameleon:
 
             loginButton = self.driver.find_element(By.ID, 'logon_button')
             loginButton.click()
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/PKU/home'))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://epe.pku.edu.cn/venue/PKU/home'))
         except:
             if retry < 2:
                 self.login(retry + 1)
@@ -88,8 +93,19 @@ class Chameleon:
         rows = []
         if self.conf.boot_place == 1:
             rows = self.select_qdb()
-        if self.conf.boot_place == 2:
+        elif self.conf.boot_place == 2:
             rows = self.select_54()
+        else:
+            if self.local_boot_place == 1:
+                rows = self.select_qdb()
+                self.local_boot_place = 0
+            else:
+                rows = self.select_54()
+                self.local_boot_place = 1
+
+        if len(rows) == 0:
+            return 0, -1
+        
         
         self.boot_date = get_boot_date(self.conf.date_st, self.conf.date_ed)
         cnt = 0
@@ -102,7 +118,7 @@ class Chameleon:
 
             for row in rows:
                 # reserve
-                WebDriverWait(self.driver, 3).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
+                WebDriverWait(self.driver, 5).until(lambda _: len(self.driver.find_elements(By.CLASS_NAME, 'reserveBlock'))>=28)
                 reserve_blocks = self.driver.find_elements(By.CLASS_NAME, 'reserveBlock')
 
                 # for time in self.timesPriority:
@@ -124,57 +140,57 @@ class Chameleon:
                 page += 1
                 self.driver.find_element(By.CLASS_NAME, 'pull-right').click()
 
-        return cnt
+        return cnt, None
 
 
     def select_qdb(self, retry = 0):
         print('Selecting qdb...')
         try:
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
             self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
                 find_element(By.CLASS_NAME, 'header').\
                     find_element(By.CLASS_NAME, 'headerContent').\
                         find_elements(By.CLASS_NAME, 'tabItem')[1].click()
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
             # venueItem:qdb venueDetailBottomItem:羽毛球场
             self.driver.find_element(By.CLASS_NAME, 'venueList').\
             find_elements(By.CLASS_NAME, 'venueItem')[0].\
                 find_element(By.CLASS_NAME, 'venueDetailBottom').\
                     find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/60'))
             # date
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))  
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))  
             rows = [5, 5, 2]
             return rows
         except:
-            if retry < 2:
-                self.select_qdb(retry + 1)
+            return []
         
 
 
     def select_54(self, retry = 0):
         print('Selecting 54...')
         try:
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'homeWrap')))
             self.driver.find_element(By.CLASS_NAME, 'homeWrap').\
                 find_element(By.CLASS_NAME, 'header').\
                     find_element(By.CLASS_NAME, 'headerContent').\
                         find_elements(By.CLASS_NAME, 'tabItem')[1].click()
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-introduce?selectIndex=1'))
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'venueList')))
             # venueItem:qdb venueDetailBottomItem:羽毛球场
             self.driver.find_element(By.CLASS_NAME, 'venueList').\
             find_elements(By.CLASS_NAME, 'venueItem')[1].\
                 find_element(By.CLASS_NAME, 'venueDetailBottom').\
                     find_elements(By.CLASS_NAME, 'venueDetailBottomItem')[0].click() 
-            WebDriverWait(self.driver, 3).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/86'))
+            WebDriverWait(self.driver, 5).until(EC.url_to_be('https://epe.pku.edu.cn/venue/pku/venue-reservation/86'))
             # date
-            WebDriverWait(self.driver, 3).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
+            # TODO: display all & relogin
+            WebDriverWait(self.driver, 5).until(EC.visibility_of(self.driver.find_element(By.CLASS_NAME, 'ivu-icon-ios-calendar-outline')))        
             rows = [5, 4]
             return rows
         except:
-            self.select_54(retry + 1)
+            return []
 
 
     def boot(self, reserve_blocks, start_index, delta, row):
@@ -186,7 +202,7 @@ class Chameleon:
                 cnt += 1
         self.driver.find_element(By.CLASS_NAME, 'ivu-checkbox-input').click()
         self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
-        WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
+        WebDriverWait(self.driver, 5).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default'))==5)
         self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
                 clear()
         self.driver.find_elements(By.CLASS_NAME, 'ivu-input-default')[0].\
@@ -194,7 +210,7 @@ class Chameleon:
         self.driver.find_elements(By.CLASS_NAME, 'payHandleItem')[1].click()
         self.display_all()
         self.verify()
-        WebDriverWait(self.driver, 3).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
+        WebDriverWait(self.driver, 5).until(lambda _:len(self.driver.find_elements(By.CLASS_NAME, 'cardPay'))>0)
         self.driver.find_elements(By.CLASS_NAME, 'cardPay')[0].click()
         self.driver.find_elements(By.CLASS_NAME, 'ivu-btn')[1].click()
         cnt += 1
